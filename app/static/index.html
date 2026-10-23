@@ -38,6 +38,13 @@
     ol { padding-left: 1.3rem; margin: 0; }
     .hint { color: var(--muted); font-size: .9rem; margin: .25rem 0 0; }
     #ingredientsCard, #recipes, #more { display: none; }
+    nav { display: flex; gap: .25rem; margin: 0 0 1.5rem; border-bottom: 1px solid var(--line); }
+    nav button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); cursor: pointer; padding: .5rem .75rem; }
+    nav button.active { color: var(--ink); border-bottom-color: var(--accent); }
+    .card .actions { margin-top: 1rem; }
+    .card .actions button { font-size: .9rem; padding: .4rem .8rem; }
+    #savedView, #savedView .hint { display: none; }
+    #savedList:empty + .hint { display: block; }
     footer { text-align: center; color: var(--muted); font-size: .9rem; margin-top: 3rem; }
     input[type=file] { display: none; }
   </style>
@@ -47,6 +54,12 @@
   <h1>Fridge to Dinner</h1>
   <p class="tagline">Photo of your fridge in. Three lazy dinners out.</p>
 
+  <nav>
+    <button id="navCook" class="active" type="button">Cook</button>
+    <button id="navSaved" type="button">Saved recipes</button>
+  </nav>
+
+  <section id="cookView">
   <div id="drop">
     <p>Drag a photo of your open fridge or pantry here, or click to choose one.</p>
     <img id="preview" alt="Preview of your fridge photo">
@@ -85,6 +98,12 @@
   <div class="row" id="more">
     <button id="moreBtn" class="secondary">Show me 3 different ideas</button>
   </div>
+  </section>
+
+  <section id="savedView">
+    <div id="savedList"></div>
+    <p class="hint">Nothing saved yet. Click "Save" on a recipe you like.</p>
+  </section>
 
   <footer>100% local. Your photos never leave your machine.</footer>
 </main>
@@ -236,28 +255,78 @@
     const box = $('recipes');
     box.innerHTML = '';
     list.forEach(r => {
-      const card = document.createElement('article');
-      card.className = 'card';
-      const h = document.createElement('h2'); h.textContent = r.dish || '—';
-      const meta = document.createElement('div'); meta.className = 'meta';
-      meta.textContent = `${r.minutes ?? '?'} min` + (model ? ` · ${model}` : '');
-      card.append(h, meta);
-      const sh = document.createElement('h3'); sh.textContent = 'Steps';
-      const ol = document.createElement('ol');
-      (r.steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; ol.appendChild(li); });
-      card.append(sh, ol);
-      if ((r.missing || []).length) {
-        const mh = document.createElement('h3'); mh.textContent = 'Not in your fridge';
-        const chips = document.createElement('div'); chips.className = 'chips';
-        r.missing.forEach(m => chips.appendChild(chip(m, 'missing')));
-        card.append(mh, chips);
-      }
-      box.appendChild(card);
+      const saved = isSaved(r.dish);
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'secondary';
+      btn.textContent = saved ? 'Saved ✓' : 'Save';
+      btn.disabled = saved;
+      btn.addEventListener('click', () => {
+        saveRecipe({ ...r, model, ingredients: [...ingredients], savedAt: Date.now() });
+        btn.textContent = 'Saved ✓'; btn.disabled = true;
+      });
+      box.appendChild(recipeCard(r, model, btn));
     });
     box.style.display = 'block';
     $('more').style.display = 'flex';
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+  function recipeCard(r, model, actionBtn) {
+    const card = document.createElement('article');
+    card.className = 'card';
+    const h = document.createElement('h2'); h.textContent = r.dish || '—';
+    const meta = document.createElement('div'); meta.className = 'meta';
+    meta.textContent = `${r.minutes ?? '?'} min` + (model ? ` · ${model}` : '');
+    card.append(h, meta);
+    const sh = document.createElement('h3'); sh.textContent = 'Steps';
+    const ol = document.createElement('ol');
+    (r.steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; ol.appendChild(li); });
+    card.append(sh, ol);
+    if ((r.missing || []).length) {
+      const mh = document.createElement('h3'); mh.textContent = 'Not in your fridge';
+      const chips = document.createElement('div'); chips.className = 'chips';
+      r.missing.forEach(m => chips.appendChild(chip(m, 'missing')));
+      card.append(mh, chips);
+    }
+    const actions = document.createElement('div'); actions.className = 'actions';
+    actions.appendChild(actionBtn);
+    card.appendChild(actions);
+    return card;
+  }
+
+  // Saved recipes (localStorage only, nothing leaves the browser)
+  const SAVED_KEY = 'fridge-to-dinner.saved';
+  function loadSaved() { try { return JSON.parse(localStorage.getItem(SAVED_KEY)) || []; } catch { return []; } }
+  function storeSaved(list) { localStorage.setItem(SAVED_KEY, JSON.stringify(list)); updateSavedCount(); }
+  function isSaved(dish) { return loadSaved().some(s => s.dish === dish); }
+  function saveRecipe(r) { if (!isSaved(r.dish)) storeSaved([r, ...loadSaved()]); }
+  function removeRecipe(dish) { storeSaved(loadSaved().filter(s => s.dish !== dish)); renderSaved(); }
+  function updateSavedCount() {
+    const n = loadSaved().length;
+    $('navSaved').textContent = n ? `Saved recipes (${n})` : 'Saved recipes';
+  }
+
+  function renderSaved() {
+    const box = $('savedList');
+    box.innerHTML = '';
+    loadSaved().forEach(r => {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'secondary'; btn.textContent = 'Remove';
+      btn.addEventListener('click', () => removeRecipe(r.dish));
+      box.appendChild(recipeCard(r, r.model, btn));
+    });
+  }
+
+  function showView(name) {
+    $('cookView').style.display = name === 'cook' ? '' : 'none';
+    $('savedView').style.display = name === 'saved' ? 'block' : 'none';
+    $('navCook').classList.toggle('active', name === 'cook');
+    $('navSaved').classList.toggle('active', name === 'saved');
+    if (name === 'saved') renderSaved();
+  }
+  $('navCook').addEventListener('click', () => showView('cook'));
+  $('navSaved').addEventListener('click', () => showView('saved'));
+  updateSavedCount();
 
   function resetResults() {
     ingredients = []; maybe = []; shownDishes = [];

@@ -26,6 +26,9 @@ Two model calls, same local model, nothing stored in between.
    short steps, a time estimate and a "missing" list for anything the dish
    needs that is not in your fridge. "Show me 3 different ideas" asks again
    while telling the model which dishes it already suggested.
+4. **Keep.** Click "Save" on a recipe you like. Saved recipes live in your
+   browser's `localStorage` and show up under the "Saved recipes" tab. The
+   server never sees them.
 
 Everything is answered in the language you picked (English, Deutsch,
 Українська).
