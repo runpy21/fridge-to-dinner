@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <title>Fridge to Dinner</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23b84b25'/%3E%3Ctext x='32' y='43' font-size='34' text-anchor='middle' fill='%23fff' font-family='Georgia,serif'%3E%26%2310047;%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2368CE99'/%3E%3Cstop offset='1' stop-color='%2361B8F9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-size='34' text-anchor='middle' fill='%2310231a' font-family='Georgia,serif'%3E%26%2310047;%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -18,12 +18,21 @@
       --muted: #5c6660;
       --line: rgba(31, 42, 36, .12);
       --line-strong: rgba(31, 42, 36, .28);
-      --accent: #b84b25;
-      --accent-ink: #9c3d1b;
-      --accent-soft: rgba(184, 75, 37, .09);
-      --on-accent: #fff;
-      --maybe: #f1e4bf;
-      --missing: #f3dad0;
+      /* Accent: mint -> sky. Solid for small accents, gradient for 1-2 key elements. */
+      --accent-start: #68CE99;
+      --accent-end: #61B8F9;
+      --accent-start-dark: #1b6f47;   /* text / focus / borders on light paper */
+      --accent-end-dark: #1a6198;
+      --accent-start-light: #e1f5ea;  /* chip fills */
+      --accent-end-light: #e0f0fe;
+      --accent: var(--accent-start);
+      --accent-ink: var(--accent-start-dark);
+      --accent-soft: var(--accent-start-light);
+      --accent-gradient: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      --accent-gradient-hover: linear-gradient(135deg, #58c28a, #4caaf1);
+      --on-accent: #10231a;
+      --maybe: var(--accent-end-light);
+      --missing: #ece9e2;
       --danger: #8a1c0f;
       --danger-bg: #f8e4df;
       --skeleton: rgba(31, 42, 36, .07);
@@ -51,12 +60,16 @@
         --muted: #a39c90;
         --line: rgba(236, 231, 221, .12);
         --line-strong: rgba(236, 231, 221, .3);
-        --accent: #e07a4f;
-        --accent-ink: #f0966f;
-        --accent-soft: rgba(224, 122, 79, .14);
-        --on-accent: #1a120e;
-        --maybe: #3b3320;
-        --missing: #40261e;
+        --accent-start-dark: #2f8f60;
+        --accent-end-dark: #2d7fc2;
+        --accent-start-light: #9fe1c0;  /* text / focus on dark paper */
+        --accent-end-light: #9ad1fb;
+        --accent-ink: var(--accent-start-light);
+        --accent-soft: rgba(104, 206, 153, .11);
+        --accent-gradient-hover: linear-gradient(135deg, var(--accent-start-light), var(--accent-end-light));
+        --on-accent: #0f1f17;
+        --maybe: rgba(97, 184, 249, .11);
+        --missing: rgba(236, 231, 221, .08);
         --danger: #f3b3a6;
         --danger-bg: #3a1f19;
         --skeleton: rgba(236, 231, 221, .08);
@@ -87,7 +100,7 @@
     ol { margin: 0; padding-left: 1.4rem; }
     li + li { margin-top: .35rem; }
     button, input, select { font: inherit; color: inherit; }
-    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+    :focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
     input[type=file] { display: none; }
     .tagline { color: var(--muted); font-size: 1.125rem; margin-top: var(--s-2); max-width: 28rem; }
     .hint { color: var(--muted); font-size: .9375rem; }
@@ -103,7 +116,8 @@
     .btn:hover { transform: translateY(-1px); }
     .btn:active { transform: scale(.97); }
     .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-    .btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+    .btn.primary { background: var(--accent-gradient); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+    .btn.primary:hover:not(:disabled) { background: var(--accent-gradient-hover); }
     .btn.primary.loading:disabled { opacity: 1; cursor: progress; }
     .btn.primary.loading::after {
       content: ""; position: absolute; inset: 0;
@@ -130,7 +144,7 @@
       color: var(--muted); cursor: pointer; font-weight: 500; transition: color var(--dur-micro) var(--ease-out);
     }
     nav [role=tab]::after {
-      content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent);
+      content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent-gradient);
       transform: scaleX(0); transform-origin: left; transition: transform var(--dur-enter) var(--ease-out-strong);
     }
     nav [role=tab]:hover { color: var(--ink); }
@@ -145,7 +159,7 @@
     }
     #drop::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--accent-soft); opacity: 0; transition: opacity var(--dur-micro) var(--ease-out); pointer-events: none; }
     #drop:hover { border-color: var(--ink); }
-    #drop.over { border-color: var(--accent); transform: scale(1.015); }
+    #drop.over { border-color: var(--accent-ink); transform: scale(1.015); }
     #drop.over::before { opacity: 1; }
     #drop p { color: var(--muted); max-width: 24rem; margin: 0 auto; }
     #drop .glyph { font-family: var(--serif); font-size: 2rem; line-height: 1; color: var(--accent); margin-bottom: var(--s-1); }
