@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fridge to Dinner</title>
+  <style>
+    :root { --bg: #f6f4ef; --card: #fff; --ink: #222; --muted: #6b6b6b; --accent: #d9542b; --line: #ddd; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+    main { max-width: 640px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+    h1 { margin: 0 0 .25rem; font-size: 2rem; }
+    .tagline { margin: 0 0 1.5rem; color: var(--muted); }
+    #drop { border: 2px dashed #bbb; border-radius: 12px; padding: 2rem 1rem; text-align: center; background: var(--card); cursor: pointer; }
+    #drop.over { border-color: var(--accent); background: #fff6f2; }
+    #drop p { margin: 0; color: var(--muted); }
+    #preview { display: none; max-width: 100%; max-height: 360px; border-radius: 8px; margin-top: 1rem; }
+    .row { display: flex; gap: .75rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
+    select, button { font: inherit; padding: .6rem .9rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+    button#go { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
+    button#go:disabled { opacity: .5; cursor: not-allowed; }
+    #status { margin-top: 1rem; color: var(--muted); }
+    #error { margin-top: 1rem; padding: .75rem 1rem; border-radius: 8px; background: #fdecea; color: #8a1c0f; display: none; white-space: pre-wrap; }
+    #result { display: none; margin-top: 1.5rem; background: var(--card); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    #result h2 { margin: 0 0 .25rem; }
+    .meta { color: var(--muted); margin-bottom: 1rem; }
+    .pills span { display: inline-block; background: #eee; border-radius: 999px; padding: .2rem .6rem; margin: .15rem .2rem .15rem 0; font-size: .9rem; }
+    .pills span.maybe { background: #fff2cc; }
+    .pills span.missing { background: #fdecea; }
+    h3 { font-size: 1rem; margin: 1rem 0 .4rem; }
+    ol { padding-left: 1.3rem; }
+    footer { text-align: center; color: var(--muted); font-size: .9rem; margin-top: 3rem; }
+    input[type=file] { display: none; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Fridge to Dinner</h1>
+  <p class="tagline">Photo of your fridge in. One lazy dinner out.</p>
+
+  <div id="drop">
+    <p>Drag a photo of your open fridge or pantry here, or click to choose one.</p>
+    <img id="preview" alt="Preview of your fridge photo">
+  </div>
+  <input type="file" id="file" accept="image/*">
+
+  <div class="row">
+    <label for="lang">Answer in</label>
+    <select id="lang">
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+      <option value="uk">Українська</option>
+    </select>
+    <button id="go" disabled>What's for dinner?</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="error"></div>
+
+  <section id="result">
+    <h2 id="dish"></h2>
+    <div class="meta"><span id="minutes"></span> · <span id="model"></span></div>
+    <h3>Ingredients I can see</h3>
+    <div class="pills" id="ingredients"></div>
+    <div id="maybeBlock"><h3>Maybe</h3><div class="pills" id="maybe"></div></div>
+    <div id="missingBlock"><h3>Not in the photo</h3><div class="pills" id="missing"></div></div>
+    <h3>Steps</h3>
+    <ol id="steps"></ol>
+  </section>
+
+  <footer>100% local. Your photos never leave your machine.</footer>
+</main>
+
+<script>
+  const MAX_SIDE = 1024;
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const preview = document.getElementById('preview');
+  const go = document.getElementById('go');
+  const status = document.getElementById('status');
+  const errorBox = document.getElementById('error');
+  const result = document.getElementById('result');
+  let blob = null;
+
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => fileInput.files[0] && setImage(fileInput.files[0]));
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) setImage(f); else showError('Please drop an image file.');
+  });
+
+  async function setImage(file) {
+    hideError();
+    result.style.display = 'none';
+    try {
+      blob = await resize(file);
+    } catch (err) {
+      showError('Could not read that image.');
+      return;
+    }
+    preview.src = URL.createObjectURL(blob);
+    preview.style.display = 'block';
+    drop.querySelector('p').textContent = 'Drop another photo to replace it.';
+    go.disabled = false;
+  }
+
+  function resize(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+        if (scale === 1 && file.type === 'image/jpeg') return resolve(file);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('encode failed')), 'image/jpeg', 0.9);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  go.addEventListener('click', async () => {
+    if (!blob) return;
+    hideError();
+    result.style.display = 'none';
+    go.disabled = true;
+    status.textContent = 'Looking in your fridge… this can take a minute on a laptop.';
+    const form = new FormData();
+    form.append('image', blob, 'fridge.jpg');
+    form.append('language', document.getElementById('lang').value);
+    try {
+      const res = await fetch('/api/dinner', { method: 'POST', body: form });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `Server error (${res.status})`);
+      render(body);
+    } catch (err) {
+      showError(err.message || 'Something went wrong.');
+    } finally {
+      status.textContent = '';
+      go.disabled = false;
+    }
+  });
+
+  function render(r) {
+    document.getElementById('dish').textContent = r.dish || '—';
+    document.getElementById('minutes').textContent = `${r.minutes ?? '?'} min`;
+    document.getElementById('model').textContent = r.model || '';
+    fillPills('ingredients', r.ingredients, '');
+    fillPills('maybe', r.maybe, 'maybe');
+    fillPills('missing', r.missing, 'missing');
+    document.getElementById('maybeBlock').style.display = (r.maybe || []).length ? '' : 'none';
+    document.getElementById('missingBlock').style.display = (r.missing || []).length ? '' : 'none';
+    const steps = document.getElementById('steps');
+    steps.innerHTML = '';
+    (r.steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; steps.appendChild(li); });
+    result.style.display = 'block';
+  }
+
+  function fillPills(id, items, cls) {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    (items || []).forEach(t => { const s = document.createElement('span'); s.textContent = t; if (cls) s.className = cls; el.appendChild(s); });
+    if (!(items || []).length && id === 'ingredients') el.textContent = 'Nothing I could identify.';
+  }
+
+  function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; }
+  function hideError() { errorBox.style.display = 'none'; }
+</script>
+</body>
+</html>
