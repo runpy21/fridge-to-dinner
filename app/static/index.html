@@ -16,19 +16,28 @@
     #drop p { margin: 0; color: var(--muted); }
     #preview { display: none; max-width: 100%; max-height: 360px; border-radius: 8px; margin-top: 1rem; }
     .row { display: flex; gap: .75rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
-    select, button { font: inherit; padding: .6rem .9rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
-    button#go { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
-    button#go:disabled { opacity: .5; cursor: not-allowed; }
+    select, button, input[type=text] { font: inherit; padding: .6rem .9rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
+    button.primary:disabled { opacity: .5; cursor: not-allowed; }
+    button.secondary { cursor: pointer; }
+    button.secondary:disabled { opacity: .5; cursor: not-allowed; }
     #status { margin-top: 1rem; color: var(--muted); }
     #error { margin-top: 1rem; padding: .75rem 1rem; border-radius: 8px; background: #fdecea; color: #8a1c0f; display: none; white-space: pre-wrap; }
-    #result { display: none; margin-top: 1.5rem; background: var(--card); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-    #result h2 { margin: 0 0 .25rem; }
-    .meta { color: var(--muted); margin-bottom: 1rem; }
-    .pills span { display: inline-block; background: #eee; border-radius: 999px; padding: .2rem .6rem; margin: .15rem .2rem .15rem 0; font-size: .9rem; }
-    .pills span.maybe { background: #fff2cc; }
-    .pills span.missing { background: #fdecea; }
+    .card { background: var(--card); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-top: 1.5rem; }
+    .card h2 { margin: 0 0 .25rem; font-size: 1.25rem; }
+    .meta { color: var(--muted); margin-bottom: .75rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+    .chip { display: inline-flex; align-items: center; gap: .3rem; background: #eee; border-radius: 999px; padding: .2rem .4rem .2rem .7rem; font-size: .9rem; }
+    .chip.maybe { background: #fff2cc; }
+    .chip.missing { background: #fdecea; padding-right: .7rem; }
+    .chip button { border: 0; background: transparent; padding: 0 .3rem; font-size: 1rem; line-height: 1; cursor: pointer; color: var(--muted); border-radius: 50%; }
+    .chip button:hover { color: var(--accent); }
+    .add { margin-top: .75rem; display: flex; gap: .5rem; }
+    .add input { flex: 1; }
     h3 { font-size: 1rem; margin: 1rem 0 .4rem; }
-    ol { padding-left: 1.3rem; }
+    ol { padding-left: 1.3rem; margin: 0; }
+    .hint { color: var(--muted); font-size: .9rem; margin: .25rem 0 0; }
+    #ingredientsCard, #recipes, #more { display: none; }
     footer { text-align: center; color: var(--muted); font-size: .9rem; margin-top: 3rem; }
     input[type=file] { display: none; }
   </style>
@@ -36,7 +45,7 @@
 <body>
 <main>
   <h1>Fridge to Dinner</h1>
-  <p class="tagline">Photo of your fridge in. One lazy dinner out.</p>
+  <p class="tagline">Photo of your fridge in. Three lazy dinners out.</p>
 
   <div id="drop">
     <p>Drag a photo of your open fridge or pantry here, or click to choose one.</p>
@@ -51,36 +60,45 @@
       <option value="de">Deutsch</option>
       <option value="uk">Українська</option>
     </select>
-    <button id="go" disabled>What's for dinner?</button>
+    <button id="analyze" class="primary" disabled>What's in my fridge?</button>
   </div>
 
   <div id="status"></div>
   <div id="error"></div>
 
-  <section id="result">
-    <h2 id="dish"></h2>
-    <div class="meta"><span id="minutes"></span> · <span id="model"></span></div>
-    <h3>Ingredients I can see</h3>
-    <div class="pills" id="ingredients"></div>
-    <div id="maybeBlock"><h3>Maybe</h3><div class="pills" id="maybe"></div></div>
-    <div id="missingBlock"><h3>Not in the photo</h3><div class="pills" id="missing"></div></div>
-    <h3>Steps</h3>
-    <ol id="steps"></ol>
+  <section id="ingredientsCard" class="card">
+    <h2>Ingredients I can see</h2>
+    <p class="hint">Remove anything I got wrong, add anything I missed.</p>
+    <h3>Confirmed</h3>
+    <div class="chips" id="ingredients"></div>
+    <div id="maybeBlock"><h3>Maybe (click + to confirm)</h3><div class="chips" id="maybe"></div></div>
+    <form class="add" id="addForm">
+      <input type="text" id="addInput" placeholder="Add an ingredient…" autocomplete="off">
+      <button type="submit" class="secondary">Add</button>
+    </form>
+    <div class="row">
+      <button id="suggest" class="primary">Suggest dinners</button>
+    </div>
   </section>
+
+  <section id="recipes"></section>
+  <div class="row" id="more">
+    <button id="moreBtn" class="secondary">Show me 3 different ideas</button>
+  </div>
 
   <footer>100% local. Your photos never leave your machine.</footer>
 </main>
 
 <script>
   const MAX_SIDE = 1024;
-  const drop = document.getElementById('drop');
-  const fileInput = document.getElementById('file');
-  const preview = document.getElementById('preview');
-  const go = document.getElementById('go');
-  const status = document.getElementById('status');
-  const errorBox = document.getElementById('error');
-  const result = document.getElementById('result');
+  const $ = id => document.getElementById(id);
+  const drop = $('drop'), fileInput = $('file'), preview = $('preview');
+  const analyze = $('analyze'), suggest = $('suggest'), moreBtn = $('moreBtn');
+  const status = $('status'), errorBox = $('error');
   let blob = null;
+  let ingredients = [];
+  let maybe = [];
+  let shownDishes = [];
 
   drop.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => fileInput.files[0] && setImage(fileInput.files[0]));
@@ -93,7 +111,7 @@
 
   async function setImage(file) {
     hideError();
-    result.style.display = 'none';
+    resetResults();
     try {
       blob = await resize(file);
     } catch (err) {
@@ -103,7 +121,7 @@
     preview.src = URL.createObjectURL(blob);
     preview.style.display = 'block';
     drop.querySelector('p').textContent = 'Drop another photo to replace it.';
-    go.disabled = false;
+    analyze.disabled = false;
   }
 
   function resize(file) {
@@ -124,48 +142,136 @@
     });
   }
 
-  go.addEventListener('click', async () => {
+  // Step 1: photo -> ingredients
+  analyze.addEventListener('click', async () => {
     if (!blob) return;
     hideError();
-    result.style.display = 'none';
-    go.disabled = true;
-    status.textContent = 'Looking in your fridge… this can take a minute on a laptop.';
+    resetResults();
+    setBusy(true, 'Looking in your fridge… this can take a minute on a laptop.');
     const form = new FormData();
     form.append('image', blob, 'fridge.jpg');
-    form.append('language', document.getElementById('lang').value);
+    form.append('language', $('lang').value);
     try {
-      const res = await fetch('/api/dinner', { method: 'POST', body: form });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.detail || `Server error (${res.status})`);
-      render(body);
+      const body = await api('/api/ingredients', { method: 'POST', body: form });
+      ingredients = body.ingredients || [];
+      maybe = body.maybe || [];
+      renderIngredients();
+      $('ingredientsCard').style.display = 'block';
     } catch (err) {
       showError(err.message || 'Something went wrong.');
     } finally {
-      status.textContent = '';
-      go.disabled = false;
+      setBusy(false);
     }
   });
 
-  function render(r) {
-    document.getElementById('dish').textContent = r.dish || '—';
-    document.getElementById('minutes').textContent = `${r.minutes ?? '?'} min`;
-    document.getElementById('model').textContent = r.model || '';
-    fillPills('ingredients', r.ingredients, '');
-    fillPills('maybe', r.maybe, 'maybe');
-    fillPills('missing', r.missing, 'missing');
-    document.getElementById('maybeBlock').style.display = (r.maybe || []).length ? '' : 'none';
-    document.getElementById('missingBlock').style.display = (r.missing || []).length ? '' : 'none';
-    const steps = document.getElementById('steps');
-    steps.innerHTML = '';
-    (r.steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; steps.appendChild(li); });
-    result.style.display = 'block';
+  // Step 2: ingredients -> recipes
+  suggest.addEventListener('click', () => fetchRecipes([]));
+  moreBtn.addEventListener('click', () => fetchRecipes(shownDishes));
+
+  async function fetchRecipes(avoid) {
+    if (!ingredients.length) { showError('Add at least one ingredient first.'); return; }
+    hideError();
+    setBusy(true, avoid.length ? 'Thinking of something different…' : 'Thinking about dinner…');
+    try {
+      const body = await api('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients, language: $('lang').value, avoid }),
+      });
+      renderRecipes(body.recipes || [], body.model);
+      shownDishes = shownDishes.concat(body.recipes.map(r => r.dish));
+    } catch (err) {
+      showError(err.message || 'Something went wrong.');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function fillPills(id, items, cls) {
-    const el = document.getElementById(id);
-    el.innerHTML = '';
-    (items || []).forEach(t => { const s = document.createElement('span'); s.textContent = t; if (cls) s.className = cls; el.appendChild(s); });
-    if (!(items || []).length && id === 'ingredients') el.textContent = 'Nothing I could identify.';
+  async function api(url, opts) {
+    const res = await fetch(url, opts);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const d = body.detail;
+      throw new Error(typeof d === 'string' ? d : `Server error (${res.status})`);
+    }
+    return body;
+  }
+
+  $('addForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('addInput').value.trim();
+    if (v && !ingredients.includes(v)) { ingredients.push(v); renderIngredients(); }
+    $('addInput').value = '';
+  });
+
+  function renderIngredients() {
+    const list = $('ingredients');
+    list.innerHTML = '';
+    if (!ingredients.length) list.textContent = 'Nothing confirmed yet. Add something below.';
+    ingredients.forEach((t, i) => list.appendChild(chip(t, '', '×', 'Remove', () => { ingredients.splice(i, 1); renderIngredients(); })));
+    const mb = $('maybe');
+    mb.innerHTML = '';
+    maybe.forEach((t, i) => mb.appendChild(chip(t, 'maybe', '+', 'Confirm', () => {
+      maybe.splice(i, 1);
+      if (!ingredients.includes(t)) ingredients.push(t);
+      renderIngredients();
+    })));
+    $('maybeBlock').style.display = maybe.length ? '' : 'none';
+  }
+
+  function chip(text, cls, symbol, title, onClick) {
+    const s = document.createElement('span');
+    s.className = 'chip ' + cls;
+    s.append(text);
+    if (onClick) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = symbol; b.title = title; b.setAttribute('aria-label', `${title} ${text}`);
+      b.addEventListener('click', onClick);
+      s.appendChild(b);
+    }
+    return s;
+  }
+
+  function renderRecipes(list, model) {
+    const box = $('recipes');
+    box.innerHTML = '';
+    list.forEach(r => {
+      const card = document.createElement('article');
+      card.className = 'card';
+      const h = document.createElement('h2'); h.textContent = r.dish || '—';
+      const meta = document.createElement('div'); meta.className = 'meta';
+      meta.textContent = `${r.minutes ?? '?'} min` + (model ? ` · ${model}` : '');
+      card.append(h, meta);
+      const sh = document.createElement('h3'); sh.textContent = 'Steps';
+      const ol = document.createElement('ol');
+      (r.steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; ol.appendChild(li); });
+      card.append(sh, ol);
+      if ((r.missing || []).length) {
+        const mh = document.createElement('h3'); mh.textContent = 'Not in your fridge';
+        const chips = document.createElement('div'); chips.className = 'chips';
+        r.missing.forEach(m => chips.appendChild(chip(m, 'missing')));
+        card.append(mh, chips);
+      }
+      box.appendChild(card);
+    });
+    box.style.display = 'block';
+    $('more').style.display = 'flex';
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function resetResults() {
+    ingredients = []; maybe = []; shownDishes = [];
+    $('ingredientsCard').style.display = 'none';
+    $('recipes').style.display = 'none';
+    $('recipes').innerHTML = '';
+    $('more').style.display = 'none';
+  }
+
+  function setBusy(busy, msg) {
+    status.textContent = busy ? msg : '';
+    analyze.disabled = busy || !blob;
+    suggest.disabled = busy;
+    moreBtn.disabled = busy;
   }
 
   function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; }

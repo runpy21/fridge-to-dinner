@@ -1,7 +1,8 @@
 # Fridge to Dinner
 
-Take a photo of your open fridge or pantry. Get **one** dinner that needs the
-fewest steps and uses only what's visible (plus salt, pepper, oil and water).
+Take a photo of your open fridge or pantry. Get **three** different dinners
+that need few steps and use mostly what's visible (plus salt, pepper, oil and
+water).
 
 Built for the Hacktoberfest Open-Source AI Challenge, theme *Slow and Steady*:
 reward laziness. No shopping list, no meal plan, no account. Just dinner.
@@ -11,11 +12,23 @@ open-weight vision model. **100% local. Your photos never leave your machine.**
 
 ## How it works
 
-1. You drop in a photo. The browser shrinks it to max 1024 px before upload.
-2. FastAPI sends the image to Ollama's `/api/chat` with a JSON schema.
-3. The model lists the ingredients it clearly sees, puts uncertain ones under
-   "maybe", and suggests the laziest dinner it can make from them, in at most
-   5 steps, in the language you picked (English, Deutsch, Українська).
+Two model calls, same local model, nothing stored in between.
+
+1. **Look.** You drop in a photo; the browser shrinks it to max 1024 px before
+   upload. FastAPI sends it to Ollama's `/api/chat` with a JSON schema and the
+   vision model lists the ingredients it clearly sees. Anything it is unsure
+   about goes under "maybe".
+2. **Fix the list.** The ingredients show up as chips. Click × to drop a wrong
+   guess, click + on a "maybe" to confirm it, or type in something the model
+   missed. The model never sees the photo again, only this list.
+3. **Cook.** "Suggest dinners" sends the confirmed list (text only) back to the
+   model and asks for exactly 3 clearly different dishes, each with at most 5
+   short steps, a time estimate and a "missing" list for anything the dish
+   needs that is not in your fridge. "Show me 3 different ideas" asks again
+   while telling the model which dishes it already suggested.
+
+Everything is answered in the language you picked (English, Deutsch,
+Українська).
 
 ## Setup
 
@@ -51,17 +64,30 @@ OLLAMA_MODEL=gemma3:12b python -m uvicorn app.main:app --reload
 
 ## API
 
-`POST /api/dinner` with multipart fields `image` (file) and `language`
+`POST /api/ingredients` with multipart fields `image` (file) and `language`
 (`en`, `de` or `uk`). Returns:
 
 ```json
 {
   "ingredients": ["eggs", "tomatoes", "cheese"],
   "maybe": ["spring onions"],
-  "dish": "Tomato and cheese omelette",
-  "steps": ["Beat the eggs.", "..."],
-  "minutes": 10,
-  "missing": [],
+  "model": "gemma3:4b"
+}
+```
+
+`POST /api/recipes` with a JSON body `{"ingredients": [...], "language": "en",
+"avoid": ["dishes already shown"]}` (`avoid` is optional). Returns:
+
+```json
+{
+  "recipes": [
+    {
+      "dish": "Tomato and cheese omelette",
+      "minutes": 10,
+      "steps": ["Beat the eggs.", "..."],
+      "missing": []
+    }
+  ],
   "model": "gemma3:4b"
 }
 ```
@@ -69,7 +95,7 @@ OLLAMA_MODEL=gemma3:12b python -m uvicorn app.main:app --reload
 ## Project layout
 
 ```
-app/main.py            FastAPI app and Ollama call
+app/main.py            FastAPI app and the two Ollama calls
 app/static/index.html  The whole UI, no framework
 ```
 
