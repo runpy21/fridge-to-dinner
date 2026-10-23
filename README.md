@@ -99,7 +99,7 @@ OLLAMA_MODEL=gemma3:12b python -m uvicorn app.main:app --reload
 
 ```
 app/main.py            FastAPI app and the two Ollama calls
-app/static/index.html  The whole UI, no framework
+app/static/index.html  The whole UI, no framework: design tokens, motion system, light/dark
 ```
 
 ## License

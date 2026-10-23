@@ -2,82 +2,271 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
   <title>Fridge to Dinner</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23b84b25'/%3E%3Ctext x='32' y='43' font-size='34' text-anchor='middle' fill='%23fff' font-family='Georgia,serif'%3E%26%2310047;%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root { --bg: #f6f4ef; --card: #fff; --ink: #222; --muted: #6b6b6b; --accent: #d9542b; --line: #ddd; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--ink); }
-    main { max-width: 640px; margin: 0 auto; padding: 2rem 1rem 4rem; }
-    h1 { margin: 0 0 .25rem; font-size: 2rem; }
-    .tagline { margin: 0 0 1.5rem; color: var(--muted); }
-    #drop { border: 2px dashed #bbb; border-radius: 12px; padding: 2rem 1rem; text-align: center; background: var(--card); cursor: pointer; }
-    #drop.over { border-color: var(--accent); background: #fff6f2; }
-    #drop p { margin: 0; color: var(--muted); }
-    #preview { display: none; max-width: 100%; max-height: 360px; border-radius: 8px; margin-top: 1rem; }
-    .row { display: flex; gap: .75rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
-    select, button, input[type=text] { font: inherit; padding: .6rem .9rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
-    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
-    button.primary:disabled { opacity: .5; cursor: not-allowed; }
-    button.secondary { cursor: pointer; }
-    button.secondary:disabled { opacity: .5; cursor: not-allowed; }
-    #status { margin-top: 1rem; color: var(--muted); }
-    #error { margin-top: 1rem; padding: .75rem 1rem; border-radius: 8px; background: #fdecea; color: #8a1c0f; display: none; white-space: pre-wrap; }
-    .card { background: var(--card); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-top: 1.5rem; }
-    .card h2 { margin: 0 0 .25rem; font-size: 1.25rem; }
-    .meta { color: var(--muted); margin-bottom: .75rem; }
-    .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
-    .chip { display: inline-flex; align-items: center; gap: .3rem; background: #eee; border-radius: 999px; padding: .2rem .4rem .2rem .7rem; font-size: .9rem; }
-    .chip.maybe { background: #fff2cc; }
-    .chip.missing { background: #fdecea; padding-right: .7rem; }
-    .chip button { border: 0; background: transparent; padding: 0 .3rem; font-size: 1rem; line-height: 1; cursor: pointer; color: var(--muted); border-radius: 50%; }
-    .chip button:hover { color: var(--accent); }
-    .add { margin-top: .75rem; display: flex; gap: .5rem; }
-    .add input { flex: 1; }
-    h3 { font-size: 1rem; margin: 1rem 0 .4rem; }
-    ol { padding-left: 1.3rem; margin: 0; }
-    .hint { color: var(--muted); font-size: .9rem; margin: .25rem 0 0; }
+    /* ---------- 1. Tokens ---------- */
+    :root {
+      --paper: #f7f3ec;
+      --card: #fffdf9;
+      --ink: #1f2a24;
+      --muted: #5c6660;
+      --line: rgba(31, 42, 36, .12);
+      --line-strong: rgba(31, 42, 36, .28);
+      --accent: #b84b25;
+      --accent-ink: #9c3d1b;
+      --accent-soft: rgba(184, 75, 37, .09);
+      --on-accent: #fff;
+      --maybe: #f1e4bf;
+      --missing: #f3dad0;
+      --danger: #8a1c0f;
+      --danger-bg: #f8e4df;
+      --skeleton: rgba(31, 42, 36, .07);
+      --shimmer: rgba(255, 255, 255, .55);
+
+      --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      --sans: "Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+
+      --s-1: .5rem; --s-2: 1rem; --s-3: 1.5rem; --s-4: 2rem; --s-6: 3rem; --s-8: 4rem;
+      --r-sm: 12px; --r-md: 16px; --r-lg: 24px; --r-pill: 999px;
+
+      --shadow-rest: 0 1px 2px rgba(31, 42, 36, .04), 0 2px 8px rgba(31, 42, 36, .04);
+      --shadow-lift: 0 2px 4px rgba(31, 42, 36, .05), 0 12px 32px rgba(31, 42, 36, .10);
+
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-out-strong: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur-micro: 150ms; --dur-enter: 320ms; --dur-exit: 200ms; --dur-reveal: 600ms;
+      --stagger: 70ms;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #15191a;
+        --card: #1d2224;
+        --ink: #ece7dd;
+        --muted: #a39c90;
+        --line: rgba(236, 231, 221, .12);
+        --line-strong: rgba(236, 231, 221, .3);
+        --accent: #e07a4f;
+        --accent-ink: #f0966f;
+        --accent-soft: rgba(224, 122, 79, .14);
+        --on-accent: #1a120e;
+        --maybe: #3b3320;
+        --missing: #40261e;
+        --danger: #f3b3a6;
+        --danger-bg: #3a1f19;
+        --skeleton: rgba(236, 231, 221, .08);
+        --shimmer: rgba(255, 255, 255, .08);
+        --shadow-rest: 0 1px 2px rgba(0, 0, 0, .3);
+        --shadow-lift: 0 2px 4px rgba(0, 0, 0, .3), 0 14px 36px rgba(0, 0, 0, .45);
+      }
+    }
+
+    /* ---------- 2. Base ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; background: var(--paper); color: var(--ink);
+      font: 400 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 42rem; margin: 0 auto;
+      padding: calc(var(--s-4) + env(safe-area-inset-top)) calc(var(--s-2) + env(safe-area-inset-right))
+               calc(var(--s-8) + env(safe-area-inset-bottom)) calc(var(--s-2) + env(safe-area-inset-left));
+    }
+    @media (min-width: 768px) { main { padding-top: var(--s-8); } }
+    h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; }
+    h1 { font-size: clamp(2.5rem, 5vw + 1.25rem, 4rem); line-height: 1; letter-spacing: -.025em; }
+    h2 { font-size: 1.5rem; line-height: 1.2; letter-spacing: -.01em; }
+    h3 { font: 600 .75rem/1.4 var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: var(--s-3) 0 var(--s-1); }
+    p { margin: 0; }
+    ol { margin: 0; padding-left: 1.4rem; }
+    li + li { margin-top: .35rem; }
+    button, input, select { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+    input[type=file] { display: none; }
+    .tagline { color: var(--muted); font-size: 1.125rem; margin-top: var(--s-2); max-width: 28rem; }
+    .hint { color: var(--muted); font-size: .9375rem; }
+    .eyebrow { font: 600 .75rem/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: var(--s-2); }
+
+    /* ---------- 3. Controls ---------- */
+    .btn {
+      position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      min-height: 44px; padding: .65rem 1.25rem; border-radius: var(--r-pill); border: 1px solid var(--line-strong);
+      background: var(--card); cursor: pointer; font-weight: 500; white-space: nowrap;
+      transition: transform var(--dur-micro) var(--ease-out), opacity var(--dur-micro) var(--ease-out);
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+    .btn.primary.loading:disabled { opacity: 1; cursor: progress; }
+    .btn.primary.loading::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 20%, var(--shimmer) 50%, transparent 80%);
+      transform: translateX(-100%); animation: shimmer 1.3s linear infinite;
+    }
+    .btn.small { min-height: 40px; padding: .45rem 1rem; font-size: .9375rem; }
+    select, input[type=text] {
+      min-height: 44px; padding: .6rem 1rem; border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+      background: var(--card); transition: border-color var(--dur-micro) var(--ease-out);
+    }
+    select { appearance: none; padding-right: 2.5rem; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235c6660' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 1rem center; }
+    select:hover, input[type=text]:hover { border-color: var(--ink); }
+    .row { display: flex; gap: var(--s-1) var(--s-2); align-items: center; flex-wrap: wrap; margin-top: var(--s-3); }
+    .row label { color: var(--muted); font-size: .9375rem; }
+    @media (max-width: 479px) { .row .btn.primary { flex: 1 0 100%; } .row select { flex: 1; } }
+
+    /* ---------- 4. Tabs ---------- */
+    nav { display: flex; gap: var(--s-1); margin: var(--s-6) 0 var(--s-4); border-bottom: 1px solid var(--line); }
+    nav [role=tab] {
+      position: relative; min-height: 44px; padding: .5rem .25rem; margin-right: var(--s-2); border: 0; background: none;
+      color: var(--muted); cursor: pointer; font-weight: 500; transition: color var(--dur-micro) var(--ease-out);
+    }
+    nav [role=tab]::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent);
+      transform: scaleX(0); transform-origin: left; transition: transform var(--dur-enter) var(--ease-out-strong);
+    }
+    nav [role=tab]:hover { color: var(--ink); }
+    nav [role=tab][aria-selected=true] { color: var(--ink); }
+    nav [role=tab][aria-selected=true]::after { transform: scaleX(1); }
+
+    /* ---------- 5. Upload ---------- */
+    #drop {
+      position: relative; border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); padding: var(--s-4) var(--s-3);
+      text-align: center; background: var(--card); cursor: pointer;
+      transition: transform var(--dur-enter) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+    }
+    #drop::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--accent-soft); opacity: 0; transition: opacity var(--dur-micro) var(--ease-out); pointer-events: none; }
+    #drop:hover { border-color: var(--ink); }
+    #drop.over { border-color: var(--accent); transform: scale(1.015); }
+    #drop.over::before { opacity: 1; }
+    #drop p { color: var(--muted); max-width: 24rem; margin: 0 auto; }
+    #drop .glyph { font-family: var(--serif); font-size: 2rem; line-height: 1; color: var(--accent); margin-bottom: var(--s-1); }
+    #preview { display: none; max-width: 100%; max-height: 380px; border-radius: var(--r-md); margin: var(--s-3) auto 0; animation: scaleIn var(--dur-reveal) var(--ease-out-strong) backwards; }
+
+    /* ---------- 6. Status, skeleton, error ---------- */
+    #status { position: relative; min-height: 1.75rem; margin-top: var(--s-2); color: var(--muted); font-size: .9375rem; }
+    .status-line { display: block; animation: fadeUp var(--dur-enter) var(--ease-out) backwards; }
+    .status-line.out { position: absolute; inset: 0; animation: fadeOut var(--dur-exit) var(--ease-out) forwards; }
+    #error { display: none; margin-top: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--danger-bg); color: var(--danger); white-space: pre-wrap; animation: fadeUp var(--dur-enter) var(--ease-out) backwards; }
+    .skeleton { display: none; }
+    body.busy .skeleton { display: block; }
+    body[data-phase=vision] .skeleton .card:nth-child(n+2) { display: none; }
+    .skeleton .card { animation: fadeIn var(--dur-enter) var(--ease-out) backwards; animation-delay: calc(var(--i) * var(--stagger)); }
+    .sk { position: relative; overflow: hidden; height: .875rem; border-radius: 6px; background: var(--skeleton); margin-top: .75rem; }
+    .sk.title { height: 1.5rem; width: 55%; margin-top: 0; }
+    .sk.short { width: 30%; } .sk.mid { width: 75%; }
+    .sk::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 20%, var(--shimmer) 50%, transparent 80%); transform: translateX(-100%); animation: shimmer 1.6s linear infinite; }
+
+    /* ---------- 7. Cards ---------- */
+    .card {
+      position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+      padding: var(--s-3); margin-top: var(--s-3); box-shadow: var(--shadow-rest);
+    }
+    @media (min-width: 768px) { .card { padding: var(--s-4); } }
+    .card::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; box-shadow: var(--shadow-lift); opacity: 0; transition: opacity var(--dur-micro) var(--ease-out); pointer-events: none; }
+    .card.lift { transition: transform var(--dur-micro) var(--ease-out); }
+    .card.lift:hover { transform: translateY(-3px); }
+    .card.lift:hover::after { opacity: 1; }
+    .card.lift:active { transform: scale(.98); }
+    .card.rise { animation: rise var(--dur-reveal) var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+    .meta { color: var(--muted); font-size: .9375rem; margin-top: .35rem; }
+    .meta .num { font-family: var(--serif); font-size: 1.125rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .card .actions { margin-top: var(--s-3); padding-top: var(--s-2); border-top: 1px solid var(--line); }
     #ingredientsCard, #recipes, #more { display: none; }
-    nav { display: flex; gap: .25rem; margin: 0 0 1.5rem; border-bottom: 1px solid var(--line); }
-    nav button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); cursor: pointer; padding: .5rem .75rem; }
-    nav button.active { color: var(--ink); border-bottom-color: var(--accent); }
-    .card .actions { margin-top: 1rem; }
-    .card .actions button { font-size: .9rem; padding: .4rem .8rem; }
+    #ingredientsCard { animation: rise var(--dur-reveal) var(--ease-out-strong) backwards; }
+    #ingredientsCard .hint { margin-top: .35rem; }
+    #more { margin-top: var(--s-3); }
+
+    /* ---------- 8. Chips ---------- */
+    .chips { display: flex; flex-wrap: wrap; gap: .5rem; min-height: 2.25rem; align-items: center; }
+    .chips.empty { color: var(--muted); font-size: .9375rem; }
+    .chip {
+      display: inline-flex; align-items: center; gap: .25rem; min-height: 36px; padding: .25rem .5rem .25rem .875rem;
+      border-radius: var(--r-pill); background: var(--accent-soft); color: var(--ink); font-size: .9375rem; font-weight: 500;
+      animation: pop var(--dur-enter) var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * var(--stagger));
+    }
+    .chip.settled { animation: none; }
+    .chip.maybe { background: var(--maybe); }
+    .chip.missing { background: var(--missing); padding-right: .875rem; }
+    .chip.leaving, .card.leaving { animation: popOut var(--dur-exit) var(--ease-out) forwards; pointer-events: none; }
+    .chip button {
+      position: relative; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--muted);
+      font-size: 1.125rem; line-height: 1; cursor: pointer; display: grid; place-items: center;
+      transition: transform var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+    }
+    .chip button::before { content: ""; position: absolute; inset: -8px; } /* 44px touch target */
+    .chip button:hover { color: var(--accent-ink); transform: scale(1.1); }
+    .chip button:active { transform: scale(.9); }
+    .add { display: flex; gap: var(--s-1); margin-top: var(--s-3); }
+    .add input { flex: 1; min-width: 0; }
+
+    /* ---------- 9. Views & footer ---------- */
     #savedView, #savedView .hint { display: none; }
     #savedList:empty + .hint { display: block; }
-    footer { text-align: center; color: var(--muted); font-size: .9rem; margin-top: 3rem; }
-    input[type=file] { display: none; }
+    .view { animation: fadeIn var(--dur-enter) var(--ease-out) backwards; }
+    footer { margin-top: var(--s-8); padding-top: var(--s-3); border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: .875rem; }
+
+    /* ---------- 10. Motion ---------- */
+    .reveal { animation: fadeUp var(--dur-reveal) var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * 90ms); }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
+    @keyframes pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+    @keyframes popOut { to { opacity: 0; transform: scale(.8); } }
+    @keyframes shimmer { to { transform: translateX(100%); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal, .card.rise, #ingredientsCard, .chip, #preview, .status-line, #error { animation-name: fadeIn; animation-duration: var(--dur-exit); animation-delay: 0ms; }
+      .chip.leaving, .card.leaving { animation-name: fadeOut; }
+      .btn, .card.lift, #drop, .chip button, nav [role=tab]::after { transition: none; }
+      .btn:hover, .btn:active, .card.lift:hover, .card.lift:active, #drop.over, .chip button:hover { transform: none; }
+      .sk::after, .btn.primary.loading::after { animation: none; }
+    }
   </style>
 </head>
 <body>
 <main>
-  <h1>Fridge to Dinner</h1>
-  <p class="tagline">Photo of your fridge in. Three lazy dinners out.</p>
+  <header>
+    <p class="eyebrow reveal" style="--i:0">A chef's notebook, kept by your fridge</p>
+    <h1 class="reveal" style="--i:1">Fridge to Dinner</h1>
+    <p class="tagline reveal" style="--i:2">Photo of your fridge in. Three lazy dinners out.</p>
+  </header>
 
-  <nav>
-    <button id="navCook" class="active" type="button">Cook</button>
-    <button id="navSaved" type="button">Saved recipes</button>
+  <nav class="reveal" style="--i:3" role="tablist" aria-label="Views">
+    <button id="navCook" class="active" type="button" role="tab" aria-selected="true" aria-controls="cookView">Cook</button>
+    <button id="navSaved" type="button" role="tab" aria-selected="false" aria-controls="savedView">Saved recipes</button>
   </nav>
 
-  <section id="cookView">
-  <div id="drop">
+  <section id="cookView" class="view" role="tabpanel" aria-labelledby="navCook">
+  <div id="drop" class="reveal" style="--i:4" role="button" tabindex="0">
+    <div class="glyph" aria-hidden="true">&#10047;</div>
     <p>Drag a photo of your open fridge or pantry here, or click to choose one.</p>
     <img id="preview" alt="Preview of your fridge photo">
   </div>
   <input type="file" id="file" accept="image/*">
 
-  <div class="row">
+  <div class="row reveal" style="--i:5">
     <label for="lang">Answer in</label>
     <select id="lang">
       <option value="en">English</option>
       <option value="de">Deutsch</option>
       <option value="uk">Українська</option>
     </select>
-    <button id="analyze" class="primary" disabled>What's in my fridge?</button>
+    <button id="analyze" class="btn primary" disabled>What's in my fridge?</button>
   </div>
 
-  <div id="status"></div>
-  <div id="error"></div>
+  <div id="status" role="status" aria-live="polite"></div>
+  <div id="error" role="alert"></div>
 
   <section id="ingredientsCard" class="card">
     <h2>Ingredients I can see</h2>
@@ -86,26 +275,31 @@
     <div class="chips" id="ingredients"></div>
     <div id="maybeBlock"><h3>Maybe (click + to confirm)</h3><div class="chips" id="maybe"></div></div>
     <form class="add" id="addForm">
-      <input type="text" id="addInput" placeholder="Add an ingredient…" autocomplete="off">
-      <button type="submit" class="secondary">Add</button>
+      <input type="text" id="addInput" placeholder="Add an ingredient…" autocomplete="off" aria-label="Add an ingredient">
+      <button type="submit" class="btn">Add</button>
     </form>
     <div class="row">
-      <button id="suggest" class="primary">Suggest dinners</button>
+      <button id="suggest" class="btn primary">Suggest dinners</button>
     </div>
   </section>
 
-  <section id="recipes"></section>
+  <section id="recipes" aria-live="polite"></section>
+  <section id="skeleton" class="skeleton" aria-hidden="true">
+    <div class="card" style="--i:0"><div class="sk title"></div><div class="sk short"></div><div class="sk"></div><div class="sk mid"></div><div class="sk"></div></div>
+    <div class="card" style="--i:1"><div class="sk title"></div><div class="sk short"></div><div class="sk"></div><div class="sk mid"></div><div class="sk"></div></div>
+    <div class="card" style="--i:2"><div class="sk title"></div><div class="sk short"></div><div class="sk"></div><div class="sk mid"></div><div class="sk"></div></div>
+  </section>
   <div class="row" id="more">
-    <button id="moreBtn" class="secondary">Show me 3 different ideas</button>
+    <button id="moreBtn" class="btn">Show me 3 different ideas</button>
   </div>
   </section>
 
-  <section id="savedView">
+  <section id="savedView" class="view" role="tabpanel" aria-labelledby="navSaved">
     <div id="savedList"></div>
     <p class="hint">Nothing saved yet. Click "Save" on a recipe you like.</p>
   </section>
 
-  <footer>100% local. Your photos never leave your machine.</footer>
+  <footer class="reveal" style="--i:6">100% local. Your photos never leave your machine.</footer>
 </main>
 
 <script>
@@ -120,6 +314,7 @@
   let shownDishes = [];
 
   drop.addEventListener('click', () => fileInput.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
   fileInput.addEventListener('change', () => fileInput.files[0] && setImage(fileInput.files[0]));
   ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
@@ -137,6 +332,7 @@
       showError('Could not read that image.');
       return;
     }
+    preview.style.display = 'none';
     preview.src = URL.createObjectURL(blob);
     preview.style.display = 'block';
     drop.querySelector('p').textContent = 'Drop another photo to replace it.';
@@ -166,7 +362,7 @@
     if (!blob) return;
     hideError();
     resetResults();
-    setBusy(true, 'Looking in your fridge… this can take a minute on a laptop.');
+    setBusy(true, 'vision');
     const form = new FormData();
     form.append('image', blob, 'fridge.jpg');
     form.append('language', $('lang').value);
@@ -190,7 +386,7 @@
   async function fetchRecipes(avoid) {
     if (!ingredients.length) { showError('Add at least one ingredient first.'); return; }
     hideError();
-    setBusy(true, avoid.length ? 'Thinking of something different…' : 'Thinking about dinner…');
+    setBusy(true, avoid.length ? 'different' : 'recipes');
     try {
       const body = await api('/api/recipes', {
         method: 'POST',
@@ -223,18 +419,30 @@
     $('addInput').value = '';
   });
 
+  // Chips already on screen keep still; only new ones pop in.
+  const seenChips = new Set();
   function renderIngredients() {
     const list = $('ingredients');
     list.innerHTML = '';
+    list.classList.toggle('empty', !ingredients.length);
     if (!ingredients.length) list.textContent = 'Nothing confirmed yet. Add something below.';
-    ingredients.forEach((t, i) => list.appendChild(chip(t, '', '×', 'Remove', () => { ingredients.splice(i, 1); renderIngredients(); })));
+    let n = 0;
+    ingredients.forEach((t, i) => {
+      const c = chip(t, '', '×', 'Remove', () => { ingredients.splice(i, 1); renderIngredients(); });
+      if (seenChips.has(t)) c.classList.add('settled'); else { stagger(c, n++); seenChips.add(t); }
+      list.appendChild(c);
+    });
     const mb = $('maybe');
     mb.innerHTML = '';
-    maybe.forEach((t, i) => mb.appendChild(chip(t, 'maybe', '+', 'Confirm', () => {
-      maybe.splice(i, 1);
-      if (!ingredients.includes(t)) ingredients.push(t);
-      renderIngredients();
-    })));
+    maybe.forEach((t, i) => {
+      const c = chip(t, 'maybe', '+', 'Confirm', () => {
+        maybe.splice(i, 1);
+        if (!ingredients.includes(t)) ingredients.push(t);
+        renderIngredients();
+      });
+      if (seenChips.has('?' + t)) c.classList.add('settled'); else { stagger(c, n++); seenChips.add('?' + t); }
+      mb.appendChild(c);
+    });
     $('maybeBlock').style.display = maybe.length ? '' : 'none';
   }
 
@@ -245,7 +453,7 @@
     if (onClick) {
       const b = document.createElement('button');
       b.type = 'button'; b.textContent = symbol; b.title = title; b.setAttribute('aria-label', `${title} ${text}`);
-      b.addEventListener('click', onClick);
+      b.addEventListener('click', () => leave(s, onClick));
       s.appendChild(b);
     }
     return s;
@@ -254,30 +462,33 @@
   function renderRecipes(list, model) {
     const box = $('recipes');
     box.innerHTML = '';
-    list.forEach(r => {
+    list.forEach((r, i) => {
       const saved = isSaved(r.dish);
       const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'secondary';
+      btn.type = 'button'; btn.className = 'btn small';
       btn.textContent = saved ? 'Saved ✓' : 'Save';
       btn.disabled = saved;
       btn.addEventListener('click', () => {
         saveRecipe({ ...r, model, ingredients: [...ingredients], savedAt: Date.now() });
         btn.textContent = 'Saved ✓'; btn.disabled = true;
       });
-      box.appendChild(recipeCard(r, model, btn));
+      box.appendChild(recipeCard(r, model, btn, i));
     });
     box.style.display = 'block';
     $('more').style.display = 'flex';
-    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    box.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'start' });
   }
 
-  function recipeCard(r, model, actionBtn) {
+  function recipeCard(r, model, actionBtn, index) {
     const card = document.createElement('article');
-    card.className = 'card';
+    card.className = 'card rise lift';
+    stagger(card, index);
     const h = document.createElement('h2'); h.textContent = r.dish || '—';
     const meta = document.createElement('div'); meta.className = 'meta';
-    meta.textContent = `${r.minutes ?? '?'} min` + (model ? ` · ${model}` : '');
+    const num = document.createElement('span'); num.className = 'num'; num.textContent = r.minutes ?? '?';
+    meta.append(num, ' min' + (model ? ` · ${model}` : ''));
     card.append(h, meta);
+    if (Number.isInteger(r.minutes)) countUp(num, r.minutes, index);
     const sh = document.createElement('h3'); sh.textContent = 'Steps';
     const ol = document.createElement('ol');
     (r.steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; ol.appendChild(li); });
@@ -285,7 +496,7 @@
     if ((r.missing || []).length) {
       const mh = document.createElement('h3'); mh.textContent = 'Not in your fridge';
       const chips = document.createElement('div'); chips.className = 'chips';
-      r.missing.forEach(m => chips.appendChild(chip(m, 'missing')));
+      r.missing.forEach((m, i) => { const c = chip(m, 'missing'); stagger(c, i); chips.appendChild(c); });
       card.append(mh, chips);
     }
     const actions = document.createElement('div'); actions.className = 'actions';
@@ -309,11 +520,12 @@
   function renderSaved() {
     const box = $('savedList');
     box.innerHTML = '';
-    loadSaved().forEach(r => {
+    loadSaved().forEach((r, i) => {
       const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'secondary'; btn.textContent = 'Remove';
-      btn.addEventListener('click', () => removeRecipe(r.dish));
-      box.appendChild(recipeCard(r, r.model, btn));
+      btn.type = 'button'; btn.className = 'btn small'; btn.textContent = 'Remove';
+      const card = recipeCard(r, r.model, btn, i);
+      btn.addEventListener('click', () => leave(card, () => removeRecipe(r.dish)));
+      box.appendChild(card);
     });
   }
 
@@ -322,6 +534,8 @@
     $('savedView').style.display = name === 'saved' ? 'block' : 'none';
     $('navCook').classList.toggle('active', name === 'cook');
     $('navSaved').classList.toggle('active', name === 'saved');
+    $('navCook').setAttribute('aria-selected', name === 'cook');
+    $('navSaved').setAttribute('aria-selected', name === 'saved');
     if (name === 'saved') renderSaved();
   }
   $('navCook').addEventListener('click', () => showView('cook'));
@@ -330,17 +544,73 @@
 
   function resetResults() {
     ingredients = []; maybe = []; shownDishes = [];
+    seenChips.clear();
     $('ingredientsCard').style.display = 'none';
     $('recipes').style.display = 'none';
     $('recipes').innerHTML = '';
     $('more').style.display = 'none';
   }
 
-  function setBusy(busy, msg) {
-    status.textContent = busy ? msg : '';
+  // Loading state: rotating status line, skeleton, button progress
+  const PHRASES = {
+    vision: ['Looking at your fridge…', 'Spotting what is on the shelves…', 'Reading the labels…', 'Choosing ingredients…'],
+    recipes: ['Choosing ingredients…', 'Writing recipes…', 'Keeping it lazy…', 'Checking the timings…'],
+    different: ['Thinking of something different…', 'Changing the cuisine…', 'Writing recipes…', 'Checking the timings…'],
+  };
+  const PHASE_BUTTON = { vision: analyze, recipes: suggest, different: moreBtn };
+  let statusTimer = null;
+
+  function setBusy(busy, phase) {
+    clearInterval(statusTimer);
+    document.body.classList.toggle('busy', busy);
+    document.body.dataset.phase = busy ? phase : '';
+    [analyze, suggest, moreBtn].forEach(b => b.classList.toggle('loading', busy && PHASE_BUTTON[phase] === b));
     analyze.disabled = busy || !blob;
     suggest.disabled = busy;
     moreBtn.disabled = busy;
+    if (!busy) { setStatus(''); return; }
+    const lines = PHRASES[phase];
+    let i = 0;
+    setStatus(lines[0]);
+    statusTimer = setInterval(() => { i = (i + 1) % lines.length; setStatus(lines[i]); }, 2800);
+  }
+
+  function setStatus(text) {
+    const old = status.querySelector('.status-line:not(.out)');
+    if (old) { old.classList.add('out'); setTimeout(() => old.remove(), 250); }
+    if (!text) return;
+    const line = document.createElement('span');
+    line.className = 'status-line'; line.textContent = text;
+    status.appendChild(line);
+  }
+
+  // Motion helpers
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  function stagger(el, i) { el.style.setProperty('--i', Math.min(i, 7)); }
+
+  function leave(el, done) {
+    if (reduceMotion.matches) return done();
+    let finished = false;
+    const finish = () => { if (finished) return; finished = true; done(); };
+    el.classList.add('leaving');
+    el.style.willChange = 'transform, opacity';
+    el.addEventListener('animationend', e => { if (e.target === el) finish(); });
+    setTimeout(finish, 300);
+  }
+
+  function countUp(el, target, index) {
+    if (reduceMotion.matches || target <= 0) return;
+    const duration = 600, delay = Math.min(index, 7) * 70;
+    const easeOut = t => 1 - Math.pow(1 - t, 3);
+    let start = null;
+    el.textContent = '0';
+    function frame(ts) {
+      if (start === null) start = ts + delay;
+      const t = Math.min(1, Math.max(0, (ts - start) / duration));
+      el.textContent = Math.round(easeOut(t) * target);
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   }
 
   function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; }
