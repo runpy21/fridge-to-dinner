@@ -100,8 +100,27 @@
     ol { margin: 0; padding-left: 1.4rem; }
     li + li { margin-top: .35rem; }
     button, input, select { font: inherit; color: inherit; }
+    [hidden] { display: none !important; }
     :focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
     input[type=file] { display: none; }
+    /* A real tap must hit the input. display:none plus input.click() opens a black camera on phones. */
+    .file-btn input[type=file] {
+      display: block; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+      opacity: 0; cursor: pointer; font-size: 16px; z-index: 2;
+    }
+    .file-btn:focus-within { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+    #cameraHint { margin-top: var(--s-1); }
+    #cameraSheet {
+      border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); color: var(--ink);
+      padding: var(--s-3); width: min(32rem, calc(100vw - 2rem));
+      max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      box-shadow: var(--shadow-lift);
+    }
+    #cameraSheet::backdrop { background: rgba(16, 20, 18, .55); }
+    #camProbe { position: fixed; left: -2000px; top: 0; width: 160px; height: 120px; overflow: hidden; }
+    #camView { display: block; width: 100%; height: 100%; object-fit: cover; background: #111; }
+    #cameraSheet #camView { width: 100%; height: auto; max-height: 60vh; border-radius: var(--r-md); }
+    #cameraSheet .row { margin-top: var(--s-2); }
     .tagline { color: var(--muted); font-size: 1.125rem; margin-top: var(--s-2); max-width: 28rem; }
     .hint { color: var(--muted); font-size: .9375rem; }
     .eyebrow { font: 600 .75rem/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: var(--s-2); }
@@ -135,7 +154,7 @@
     select:hover, input[type=text]:hover { border-color: var(--ink); }
     .row { display: flex; gap: var(--s-1) var(--s-2); align-items: center; flex-wrap: wrap; margin-top: var(--s-3); }
     .row label { color: var(--muted); font-size: .9375rem; }
-    @media (max-width: 479px) { .row .btn.primary { flex: 1 0 100%; } .row select { flex: 1; } }
+    @media (max-width: 479px) { .row .btn.primary, .photo-actions .btn { flex: 1 0 100%; } .row select { flex: 1; } }
 
     /* ---------- 4. Tabs ---------- */
     nav { display: flex; gap: var(--s-1); margin: var(--s-6) 0 var(--s-4); border-bottom: 1px solid var(--line); }
@@ -264,10 +283,26 @@
   <section id="cookView" class="view" role="tabpanel" aria-labelledby="navCook">
   <div id="drop" class="reveal" style="--i:4" role="button" tabindex="0">
     <div class="glyph" aria-hidden="true">&#10047;</div>
-    <p>Drag a photo of your open fridge or pantry here, or click to choose one.</p>
+    <p>Drag a photo of your open fridge or pantry here, or use the buttons below.</p>
     <img id="preview" alt="Preview of your fridge photo">
   </div>
-  <input type="file" id="file" accept="image/*">
+  <div class="row photo-actions">
+    <button type="button" id="takePhoto" class="btn primary">Take a photo</button>
+    <label class="btn file-btn">Choose a photo
+      <input type="file" id="file" accept="image/*">
+    </label>
+  </div>
+  <p class="hint" id="cameraHint">For security reasons the camera is not available. Choose a photo from your gallery or files.</p>
+
+  <div id="camProbe" aria-hidden="true"><video id="camView" autoplay muted playsinline webkit-playsinline></video></div>
+  <dialog id="cameraSheet" aria-label="Camera">
+    <div id="camSlot"></div>
+    <div class="row">
+      <button type="button" id="camShot" class="btn primary" disabled>Use this photo</button>
+      <button type="button" id="camClose" class="btn">Close</button>
+    </div>
+    <p class="hint" id="camStatus" role="status"></p>
+  </dialog>
 
   <div class="row reveal" style="--i:5">
     <label for="lang">Answer in</label>
@@ -327,9 +362,138 @@
   let maybe = [];
   let shownDishes = [];
 
-  drop.addEventListener('click', () => fileInput.click());
-  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
-  fileInput.addEventListener('change', () => fileInput.files[0] && setImage(fileInput.files[0]));
+  // Phones: never open the library picker with input.click().
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  if (coarse) {
+    drop.removeAttribute('role');
+    drop.removeAttribute('tabindex');
+  } else {
+    drop.addEventListener('click', () => fileInput.click());
+    drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+  }
+  function onPicked(input) {
+    const f = input.files && input.files[0];
+    input.value = '';
+    if (f) setImage(f);
+  }
+  fileInput.addEventListener('change', () => onPicked(fileInput));
+
+  // Take a photo goes through getUserMedia, which is what makes the browser ask Allow / Block.
+  const camView = $('camView');
+  const camSheet = $('cameraSheet');
+  let camStream = null;
+  camView.muted = true;
+  camView.playsInline = true;
+
+  $('takePhoto').addEventListener('click', openCamera);
+  $('camClose').addEventListener('click', () => camSheet.close());
+  $('camShot').addEventListener('click', snapCamera);
+  camSheet.addEventListener('close', () => { stopCamera(); $('camProbe').appendChild(camView); });
+
+  function cameraAllowed() {
+    return window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  }
+
+  if (!cameraAllowed()) {
+    $('takePhoto').hidden = true;
+    $('cameraHint').textContent = 'For security reasons the camera is not available. Choose a photo from your gallery or files.';
+  } else {
+    $('cameraHint').textContent = 'Take a photo asks the browser for the camera.';
+  }
+
+  async function openCamera() {
+    hideError();
+    if (!cameraAllowed()) {
+      showError('For security reasons the camera is not available. Choose a photo from your gallery or files.');
+      return;
+    }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+    } catch (err) {
+      if (err && err.name === 'OverconstrainedError') {
+        try { stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true }); }
+        catch (err2) { showError(cameraError(err2)); return; }
+      } else {
+        showError(cameraError(err)); return;
+      }
+    }
+    camStream = stream;
+    $('camProbe').appendChild(camView);
+    camView.srcObject = stream;
+    try { await camView.play(); } catch (err) { /* autoplay already started it */ }
+    const picture = await waitForPicture(camView);
+    if (!picture) {
+      stopCamera();
+      showError('The camera did not give a picture, so it was not opened. Use Choose a photo instead.');
+      return;
+    }
+    $('camSlot').appendChild(camView);
+    $('camShot').disabled = false;
+    $('camStatus').textContent = '';
+    camSheet.showModal();
+  }
+
+  function nextFrame(video) {
+    return new Promise(resolve => {
+      if (typeof video.requestVideoFrameCallback === 'function') video.requestVideoFrameCallback(() => resolve());
+      else requestAnimationFrame(() => resolve());
+      setTimeout(resolve, 400);
+    });
+  }
+
+  async function waitForPicture(video) {
+    const start = performance.now();
+    while (performance.now() - start < 1200) {
+      await nextFrame(video);
+      if (video.videoWidth && !frameIsBlack(video)) return true;
+    }
+    return false;
+  }
+
+  function frameIsBlack(video) {
+    const c = document.createElement('canvas');
+    c.width = 16; c.height = 16;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(video, 0, 0, 16, 16);
+    const data = g.getImageData(0, 0, 16, 16).data;
+    let lit = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] > 12 || data[i + 1] > 12 || data[i + 2] > 12) lit++;
+    }
+    return lit < 4;
+  }
+
+  function cameraError(err) {
+    const name = err && err.name;
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError')
+      return 'Camera blocked. Choose Allow in the browser prompt, or allow Camera for this site in the address bar, then tap Take a photo again.';
+    if (name === 'NotFoundError') return 'No camera was found on this device.';
+    if (name === 'NotReadableError') return 'The camera is in use by another app. Close it and try again.';
+    return 'Could not open the camera. Use Choose a photo instead.';
+  }
+
+  function stopCamera() {
+    if (camStream) camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+    camView.srcObject = null;
+  }
+
+  function snapCamera() {
+    const w = camView.videoWidth, h = camView.videoHeight;
+    if (!w || !h) { $('camStatus').textContent = 'The camera has not produced a picture yet.'; return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(camView, 0, 0);
+    canvas.toBlob(b => {
+      if (!b) { showError('Could not save that photo.'); camSheet.close(); return; }
+      camSheet.close();
+      setImage(new File([b], 'fridge.jpg', { type: 'image/jpeg' }));
+    }, 'image/jpeg', 0.9);
+  }
   ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
   drop.addEventListener('drop', e => {
@@ -346,11 +510,39 @@
       showError('Could not read that image.');
       return;
     }
+    if (await looksBlank(blob)) {
+      blob = null;
+      preview.style.display = 'none';
+      analyze.disabled = true;
+      showError('That picture is blank, so it was not used. For security reasons the camera is not available. Choose a photo from your gallery or files.');
+      return;
+    }
     preview.style.display = 'none';
     preview.src = URL.createObjectURL(blob);
     preview.style.display = 'block';
     drop.querySelector('p').textContent = 'Drop another photo to replace it.';
     analyze.disabled = false;
+  }
+
+  function looksBlank(file) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        const c = document.createElement('canvas');
+        c.width = 16; c.height = 16;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.drawImage(img, 0, 0, 16, 16);
+        const data = g.getImageData(0, 0, 16, 16).data;
+        let lit = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] > 12 || data[i + 1] > 12 || data[i + 2] > 12) lit++;
+        }
+        resolve(lit < 4);
+      };
+      img.onerror = () => resolve(false);
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   function resize(file) {
@@ -627,7 +819,14 @@
     requestAnimationFrame(frame);
   }
 
-  function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; }
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+    errorBox.style.animation = 'none';
+    void errorBox.offsetWidth;
+    errorBox.style.animation = '';
+    errorBox.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'center' });
+  }
   function hideError() { errorBox.style.display = 'none'; }
 </script>
 </body>

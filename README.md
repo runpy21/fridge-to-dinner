@@ -14,7 +14,9 @@ open-weight vision model. **100% local. Your photos never leave your machine.**
 
 Two model calls, same local model, nothing stored in between.
 
-1. **Look.** You drop in a photo; the browser shrinks it to max 1024 px before
+1. **Look.** You drop in a photo, take one, or choose one from your library.
+   **Take a photo** asks for the camera on https. On http it does not open the
+   camera; it shows “For security reasons the camera is not available. Choose a photo from your gallery or files.” and scrolls to it. The browser shrinks the photo to max 1024 px before
    upload. FastAPI sends it to Ollama's `/api/chat` with a JSON schema and the
    vision model lists the ingredients it clearly sees. Anything it is unsure
    about goes under "maybe".
