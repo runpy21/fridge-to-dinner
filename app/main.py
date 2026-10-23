@@ -31,9 +31,11 @@ RESULT_SCHEMA = {
 PROMPT = """You are looking at a photo of a fridge or pantry.
 
 Rules:
-1. "ingredients": list ONLY food items you can clearly see and identify.
+1. "ingredients": list ONLY food items you can clearly see and identify. Be conservative:
+   if you cannot read the label or see the food itself, it is not "clearly visible".
 2. "maybe": items you think you see but are not sure about. Do not put them in "ingredients".
-3. Never invent ingredients that are not in the photo.
+3. Never invent ingredients. Ignore brand names, appliance text, dishes, containers and
+   anything that is not food. Something inside an opaque box is "maybe" at best.
 4. "dish": suggest exactly ONE dinner that needs the fewest steps and uses only
    items from "ingredients", plus salt, pepper, oil and water. Prefer the laziest option.
 5. "steps": at most 5 short steps, one sentence each.
