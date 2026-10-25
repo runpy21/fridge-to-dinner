@@ -1,0 +1,263 @@
+    /* ---------- 1. Tokens ---------- */
+    :root {
+      --paper: #f7f3ec;
+      --card: #fffdf9;
+      --ink: #1f2a24;
+      --muted: #5c6660;
+      --line: rgba(31, 42, 36, .12);
+      --line-strong: rgba(31, 42, 36, .28);
+      /* Accent: mint -> sky. Solid for small accents, gradient for 1-2 key elements. */
+      --accent-start: #68CE99;
+      --accent-end: #61B8F9;
+      --accent-start-dark: #1b6f47;   /* text / focus / borders on light paper */
+      --accent-end-dark: #1a6198;
+      --accent-start-light: #e1f5ea;  /* chip fills */
+      --accent-end-light: #e0f0fe;
+      --accent: var(--accent-start);
+      --accent-ink: var(--accent-start-dark);
+      --accent-soft: var(--accent-start-light);
+      --accent-gradient: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      --accent-gradient-hover: linear-gradient(135deg, #58c28a, #4caaf1);
+      --on-accent: #10231a;
+      --maybe: var(--accent-end-light);
+      --missing: #ece9e2;
+      --danger: #8a1c0f;
+      --danger-bg: #f8e4df;
+      --skeleton: rgba(31, 42, 36, .07);
+      --shimmer: rgba(255, 255, 255, .55);
+
+      --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      --sans: "Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+
+      --s-1: .5rem; --s-2: 1rem; --s-3: 1.5rem; --s-4: 2rem; --s-6: 3rem; --s-8: 4rem;
+      --r-sm: 12px; --r-md: 16px; --r-lg: 24px; --r-pill: 999px;
+
+      --shadow-rest: 0 1px 2px rgba(31, 42, 36, .04), 0 2px 8px rgba(31, 42, 36, .04);
+      --shadow-lift: 0 2px 4px rgba(31, 42, 36, .05), 0 12px 32px rgba(31, 42, 36, .10);
+
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-out-strong: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur-micro: 150ms; --dur-enter: 320ms; --dur-exit: 200ms; --dur-reveal: 600ms;
+      --stagger: 70ms;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #15191a;
+        --card: #1d2224;
+        --ink: #ece7dd;
+        --muted: #a39c90;
+        --line: rgba(236, 231, 221, .12);
+        --line-strong: rgba(236, 231, 221, .3);
+        --accent-start-dark: #2f8f60;
+        --accent-end-dark: #2d7fc2;
+        --accent-start-light: #9fe1c0;  /* text / focus on dark paper */
+        --accent-end-light: #9ad1fb;
+        --accent-ink: var(--accent-start-light);
+        --accent-soft: rgba(104, 206, 153, .11);
+        --accent-gradient-hover: linear-gradient(135deg, var(--accent-start-light), var(--accent-end-light));
+        --on-accent: #0f1f17;
+        --maybe: rgba(97, 184, 249, .11);
+        --missing: rgba(236, 231, 221, .08);
+        --danger: #f3b3a6;
+        --danger-bg: #3a1f19;
+        --skeleton: rgba(236, 231, 221, .08);
+        --shimmer: rgba(255, 255, 255, .08);
+        --shadow-rest: 0 1px 2px rgba(0, 0, 0, .3);
+        --shadow-lift: 0 2px 4px rgba(0, 0, 0, .3), 0 14px 36px rgba(0, 0, 0, .45);
+      }
+    }
+
+    /* ---------- 2. Base ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; min-height: 100dvh; display: flex; flex-direction: column;
+      background: var(--paper); color: var(--ink);
+      font: 400 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased;
+    }
+    main {
+      flex: 1; display: flex; flex-direction: column; width: 100%;
+      max-width: 42rem; margin: 0 auto;
+      padding: calc(var(--s-4) + env(safe-area-inset-top)) calc(var(--s-2) + env(safe-area-inset-right))
+               calc(5rem + env(safe-area-inset-bottom)) calc(var(--s-2) + env(safe-area-inset-left));
+    }
+    @media (min-width: 768px) { main { padding-top: var(--s-8); } }
+    h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; }
+    h1 { font-size: clamp(2.5rem, 5vw + 1.25rem, 4rem); line-height: 1; letter-spacing: -.025em; }
+    h2 { font-size: 1.5rem; line-height: 1.2; letter-spacing: -.01em; }
+    h3 { font: 600 .75rem/1.4 var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: var(--s-3) 0 var(--s-1); }
+    p { margin: 0; }
+    ol { margin: 0; padding-left: 1.4rem; }
+    li + li { margin-top: .35rem; }
+    button, input, select { font: inherit; color: inherit; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
+    input[type=file] { display: none; }
+    /* A real tap must hit the input. display:none plus input.click() opens a black camera on phones. */
+    .file-btn input[type=file] {
+      display: block; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+      opacity: 0; cursor: pointer; font-size: 16px; z-index: 2;
+    }
+    .file-btn:focus-within { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+    #cameraHint { margin-top: var(--s-1); }
+    #cameraSheet {
+      border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); color: var(--ink);
+      padding: var(--s-3); width: min(32rem, calc(100vw - 2rem));
+      max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      box-shadow: var(--shadow-lift);
+    }
+    #cameraSheet::backdrop { background: rgba(16, 20, 18, .55); }
+    #camProbe { position: fixed; left: -2000px; top: 0; width: 160px; height: 120px; overflow: hidden; }
+    #camView { display: block; width: 100%; height: 100%; object-fit: cover; background: #111; }
+    #cameraSheet #camView { width: 100%; height: auto; max-height: 60vh; border-radius: var(--r-md); }
+    #cameraSheet .row { margin-top: var(--s-2); }
+    .tagline { color: var(--muted); font-size: 1.125rem; margin-top: var(--s-2); max-width: 28rem; }
+    .hint { color: var(--muted); font-size: .9375rem; }
+    .eyebrow { font: 600 .75rem/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: var(--s-2); }
+
+    /* ---------- 3. Controls ---------- */
+    .btn {
+      position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      min-height: 44px; padding: .65rem 1.25rem; border-radius: var(--r-pill); border: 1px solid var(--line-strong);
+      background: var(--card); cursor: pointer; font-weight: 500; white-space: nowrap;
+      transition: transform var(--dur-micro) var(--ease-out), opacity var(--dur-micro) var(--ease-out);
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn.primary { background: var(--accent-gradient); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+    .btn.primary:hover:not(:disabled) { background: var(--accent-gradient-hover); }
+    .btn.primary.loading:disabled { opacity: 1; cursor: progress; }
+    .btn.primary.loading::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 20%, var(--shimmer) 50%, transparent 80%);
+      transform: translateX(-100%); animation: shimmer 1.3s linear infinite;
+    }
+    .btn.small { min-height: 40px; padding: .45rem 1rem; font-size: .9375rem; }
+    select, input[type=text] {
+      min-height: 44px; padding: .6rem 1rem; border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+      background: var(--card); transition: border-color var(--dur-micro) var(--ease-out);
+    }
+    select { appearance: none; padding-right: 2.5rem; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235c6660' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 1rem center; }
+    select:hover, input[type=text]:hover { border-color: var(--ink); }
+    .row { display: flex; gap: var(--s-1) var(--s-2); align-items: center; flex-wrap: wrap; margin-top: var(--s-3); }
+    .row label { color: var(--muted); font-size: .9375rem; }
+    @media (max-width: 479px) { .row .btn.primary, .photo-actions .btn { flex: 1 0 100%; } .row select { flex: 1; } }
+
+    /* ---------- 4. Tabs ---------- */
+    nav { display: flex; gap: var(--s-1); margin: var(--s-6) 0 var(--s-4); border-bottom: 1px solid var(--line); }
+    nav [role=tab] {
+      position: relative; min-height: 44px; padding: .5rem .25rem; margin-right: var(--s-2); border: 0; background: none;
+      color: var(--muted); cursor: pointer; font-weight: 500; transition: color var(--dur-micro) var(--ease-out);
+    }
+    nav [role=tab]::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent-gradient);
+      transform: scaleX(0); transform-origin: left; transition: transform var(--dur-enter) var(--ease-out-strong);
+    }
+    nav [role=tab]:hover { color: var(--ink); }
+    nav [role=tab][aria-selected=true] { color: var(--ink); }
+    nav [role=tab][aria-selected=true]::after { transform: scaleX(1); }
+
+    /* ---------- 5. Upload ---------- */
+    #drop {
+      position: relative; border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); padding: var(--s-4) var(--s-3);
+      text-align: center; background: var(--card); cursor: pointer;
+      transition: transform var(--dur-enter) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+    }
+    #drop::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--accent-soft); opacity: 0; transition: opacity var(--dur-micro) var(--ease-out); pointer-events: none; }
+    #drop:hover { border-color: var(--ink); }
+    #drop.over { border-color: var(--accent-ink); transform: scale(1.015); }
+    #drop.over::before { opacity: 1; }
+    #drop p { color: var(--muted); max-width: 24rem; margin: 0 auto; }
+    #drop .glyph { font-family: var(--serif); font-size: 2rem; line-height: 1; color: var(--accent); margin-bottom: var(--s-1); }
+    #preview { display: none; max-width: 100%; max-height: 380px; border-radius: var(--r-md); margin: var(--s-3) auto 0; animation: scaleIn var(--dur-reveal) var(--ease-out-strong) backwards; }
+
+    /* ---------- 6. Status, skeleton, error ---------- */
+    #status { position: relative; min-height: 1.75rem; margin-top: var(--s-2); color: var(--muted); font-size: .9375rem; }
+    .status-line { display: block; animation: fadeUp var(--dur-enter) var(--ease-out) backwards; }
+    .status-line.out { position: absolute; inset: 0; animation: fadeOut var(--dur-exit) var(--ease-out) forwards; }
+    #error { display: none; margin-top: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--danger-bg); color: var(--danger); white-space: pre-wrap; animation: fadeUp var(--dur-enter) var(--ease-out) backwards; }
+    .skeleton { display: none; }
+    body.busy .skeleton { display: block; }
+    body[data-phase=vision] .skeleton .card:nth-child(n+2) { display: none; }
+    .skeleton .card { animation: fadeIn var(--dur-enter) var(--ease-out) backwards; animation-delay: calc(var(--i) * var(--stagger)); }
+    .sk { position: relative; overflow: hidden; height: .875rem; border-radius: 6px; background: var(--skeleton); margin-top: .75rem; }
+    .sk.title { height: 1.5rem; width: 55%; margin-top: 0; }
+    .sk.short { width: 30%; } .sk.mid { width: 75%; }
+    .sk::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 20%, var(--shimmer) 50%, transparent 80%); transform: translateX(-100%); animation: shimmer 1.6s linear infinite; }
+
+    /* ---------- 7. Cards ---------- */
+    .card {
+      position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+      padding: var(--s-3); margin-top: var(--s-3); box-shadow: var(--shadow-rest);
+    }
+    @media (min-width: 768px) { .card { padding: var(--s-4); } }
+    .card::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; box-shadow: var(--shadow-lift); opacity: 0; transition: opacity var(--dur-micro) var(--ease-out); pointer-events: none; }
+    .card.lift { transition: transform var(--dur-micro) var(--ease-out); }
+    .card.lift:hover { transform: translateY(-3px); }
+    .card.lift:hover::after { opacity: 1; }
+    .card.lift:active { transform: scale(.98); }
+    .card.rise { animation: rise var(--dur-reveal) var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+    .meta { color: var(--muted); font-size: .9375rem; margin-top: .35rem; }
+    .meta .num { font-family: var(--serif); font-size: 1.125rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .card .actions { margin-top: var(--s-3); padding-top: var(--s-2); border-top: 1px solid var(--line); }
+    #ingredientsCard, #recipes, #more { display: none; }
+    #ingredientsCard { animation: rise var(--dur-reveal) var(--ease-out-strong) backwards; }
+    #ingredientsCard .hint { margin-top: .35rem; }
+    #more { margin-top: var(--s-3); }
+
+    /* ---------- 8. Chips ---------- */
+    .chips { display: flex; flex-wrap: wrap; gap: .5rem; min-height: 2.25rem; align-items: center; }
+    .chips.empty { color: var(--muted); font-size: .9375rem; }
+    .chip {
+      display: inline-flex; align-items: center; gap: .25rem; min-height: 36px; padding: .25rem .5rem .25rem .875rem;
+      border-radius: var(--r-pill); background: var(--accent-soft); color: var(--ink); font-size: .9375rem; font-weight: 500;
+      animation: pop var(--dur-enter) var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * var(--stagger));
+    }
+    .chip.settled { animation: none; }
+    .chip.maybe { background: var(--maybe); }
+    .chip.missing { background: var(--missing); padding-right: .875rem; }
+    .chip.leaving, .card.leaving { animation: popOut var(--dur-exit) var(--ease-out) forwards; pointer-events: none; }
+    .chip button {
+      position: relative; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--muted);
+      font-size: 1.125rem; line-height: 1; cursor: pointer; display: grid; place-items: center;
+      transition: transform var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+    }
+    .chip button::before { content: ""; position: absolute; inset: -8px; } /* 44px touch target */
+    .chip button:hover { color: var(--accent-ink); transform: scale(1.1); }
+    .chip button:active { transform: scale(.9); }
+    .add { display: flex; gap: var(--s-1); margin-top: var(--s-3); }
+    .add input { flex: 1; min-width: 0; }
+
+    /* ---------- 9. Views & footer ---------- */
+    #savedView, #savedView .hint { display: none; }
+    #savedList:empty + .hint { display: block; }
+    .view { animation: fadeIn var(--dur-enter) var(--ease-out) backwards; }
+    footer {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+      margin: 0; padding: var(--s-2) var(--s-2) calc(var(--s-2) + env(safe-area-inset-bottom));
+      background: var(--paper); border-top: 1px solid var(--line);
+      text-align: center; color: var(--muted); font-size: .875rem;
+    }
+
+    /* ---------- 10. Motion ---------- */
+    .reveal { animation: fadeUp var(--dur-reveal) var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * 90ms); }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
+    @keyframes pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+    @keyframes popOut { to { opacity: 0; transform: scale(.8); } }
+    @keyframes shimmer { to { transform: translateX(100%); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal, .card.rise, #ingredientsCard, .chip, #preview, .status-line, #error { animation-name: fadeIn; animation-duration: var(--dur-exit); animation-delay: 0ms; }
+      .chip.leaving, .card.leaving { animation-name: fadeOut; }
+      .btn, .card.lift, #drop, .chip button, nav [role=tab]::after { transition: none; }
+      .btn:hover, .btn:active, .card.lift:hover, .card.lift:active, #drop.over, .chip button:hover { transform: none; }
+      .sk::after, .btn.primary.loading::after { animation: none; }
+    }
+  

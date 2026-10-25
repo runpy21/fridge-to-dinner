@@ -100,8 +100,13 @@ OLLAMA_MODEL=gemma3:12b python -m uvicorn app.main:app --reload
 ## Project layout
 
 ```
-app/main.py            FastAPI app and the two Ollama calls
-app/static/index.html  The whole UI, no framework: design tokens, motion system, light/dark
+app/main.py            The app, the page, and the two routes
+app/ollama.py          The local model call and its error messages
+app/prompts.py         Prompts and the JSON the model must return
+app/schemas.py         The recipe request body
+app/static/index.html  Page markup
+app/static/styles.css  Design tokens, layout, motion, light and dark
+app/static/app.js      Upload, camera, recipes, and saved recipes
 ```
 
 ## License
